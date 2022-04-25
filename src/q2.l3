@@ -67,28 +67,60 @@
    )
   )
 )
+
 (define make-dict
   (lambda ()
-    @TODO
+  (cons "dict" '())
   )
 )
 
 (define dict?
   (lambda (e)
-    @TODO
+  (if(pair? e)
+  (if(eq? "dict" (car e))
+  #t
+  #f 
   )
+  #f
+  )
+)
 )
 
 (define get
   (lambda (dict k)
-    @TODO
+  (helpGet (cdr dict) k)
   )
+)
+
+(define helpGet
+(lambda (list k)
+(if(empty? list)
+(make-error k)
+(if(= car(car list) k)
+(make-ok cdr(car list))
+(helpGet (cdr list) k)
+)
+)
+)
 )
 
 (define put
   (lambda (dict k v)
-    @TODO
+    (cons (car dict) (helpPut((cdr dict) k v))
   )
+)
+)
+
+(define helpPut
+(lambda (list k v)
+(if(empty? list)
+(cons (cons k v) '())
+(if(= car(car list) k)
+(cons (cons k v) (cdr list))
+(cons (car list) helpPut((cdr list) k v))
+)
+)
+)
 )
 
 (define map-dict
