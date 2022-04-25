@@ -59,13 +59,13 @@
 
 (define bind 
   (lambda (f)
-  (lambda (x)
-  (if(result? (f x))
-  (f x)
-  (make-error("cannot operate"))
+    (lambda (x)
+      (if
+      (error? x)
+      (make-error(cdr x))
+      (f (cdr x)))
+   )
   )
-  )
-)
 )
 (define make-dict
   (lambda ()
