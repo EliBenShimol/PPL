@@ -50,16 +50,23 @@
 
 (define result->val
   (lambda (res)
+  (if(result? res)
   (cdr res)
+  '()
+  )
   )
 )
 
 (define bind 
   (lambda (f)
-    @TODO
+  (lambda (x)
+  (if(result? (f x))
+  (f x)
+  (make-error("cannot operate"))
+  )
   )
 )
-
+)
 (define make-dict
   (lambda ()
     @TODO
