@@ -127,14 +127,42 @@
  )
 )
 
+(define mapHelper
+  (lambda (list f)
+    (if(empty? list)
+      '()
+      (cons (cons (car (car list)) (f (cdr (car list)))
+      ) 
+      (mapHelper (cdr list) f))
+    )
+  )
+)
+
 (define map-dict
   (lambda (dict f)
-    @TODO
+    (if(dict? dict)
+      (make-ok (cons (car dict) (mapHelper (cdr dict) f)))
+      (make-error "Error: not a dictionary")
+    )
+  )
+)
+(define filterHelper
+  (lambda (list pred)
+    (if(empty? list)
+      '()
+      (if(pred (car (car list)) (cdr (car list)))
+         (cons (car list) (filterHelper (cdr list) pred))
+         (filterHelper (cdr list) pred)
+      )
+    )
   )
 )
 
 (define filter-dict
   (lambda (dict pred)
-    @TODO
+    (if(dict? dict)
+      (make-ok (cons (car dict) (filterHelper (cdr dict) pred)))
+      (make-error "Error: not a dictionary")
+    )
   )
 )
