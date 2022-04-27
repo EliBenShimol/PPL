@@ -99,28 +99,20 @@
     )
   )
 
-
-(define helpPut
-(lambda (list k v)
-  (if(pair? list)
-    (if(= (car(car list)) k)
-      (cons (cons k v) (cdr list))
-      (cons (car list) (helpPut (cdr list) k v))
-    )
-    (cons (cons k v) '())
-   )
-  )
- )
-
 (define put
   (lambda (dict k v)
     (if(dict? dict)
-      (make-ok (cons (car dict) (helpPut (cdr dict) k v)))
-      (make-error "Error: not a dictionary")
+     (if(empty? (cdr dict))
+      (make-ok( cons "dict" (cons (cons k v) '())))
+      (if(= (car(car (cdr dict))) k)
+        (make-ok(cons "dict" (cons (cons k v) (cdr(cdr dict)))))
+        (make-ok (cons "dict" (cons (cdr dict) (cdr(result->val(put(cons "dict" (cdr(cdr dict))) k v) ) ) ) ) )
+      )
+    )
+    (make-error "Error: not a dictionary")
   )
  )
 )
-
 (define mapHelper
   (lambda (list f)
     (if(empty? list)
