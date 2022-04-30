@@ -79,7 +79,11 @@ L.isLitExp(exp) ? forLitExp(exp):
 L.unparseL31(exp);
 //used for vals
 
-const forLitExp=(exp:L.LitExp):string=>"Symbol.for("+L.unparseL31(exp).substring(1)+")";
+const forLitExp=(exp:L.LitExp):string=>{
+    const str=" \" \""+L.unparseL31(exp).substring(1)+"\" \" ";
+    return "Symbol.for("+str.substring(3, str.length-3)+')';
+}
+
 const f=(total:string, now:L.VarDecl):string=>total+','+now.var;
 
 const f2=(total:string, now:L.CExp):string=>total+','+forCEXP(now);
