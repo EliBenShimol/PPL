@@ -40,22 +40,25 @@ const rewriteVals=(e: L.Binding): L.Binding=>
     L.makeBinding(e.var.var,rewriteAllLetCExp(e.val))
 
 
-const rewriteLet = (e: L.LetPlusExp): L.LetExp => {
-        //const vars : L.VarDecl[] = R.map((b) => b.var, e.bindings);
-        //const vals: L.CExp[] = R.map((b) => b.val, e.bindings);
-        const isAtomicBinding = (bid: L.Binding) => L.isAtomicExp(bid.val) &&(!L.isVarRef(bid.val))  ;
-        const isCompoundBinding = (bid: L.Binding) => L.isCompoundExp(bid.val) || L.isVarRef(bid.val);
-        const AtomicVals = R.filter(isAtomicBinding, e.bindings);
-        const CompoundVals = R.map(rewriteVals, R.filter(isCompoundBinding, e.bindings));
+const rewriteLet = (e: L.LetPlusExp): L.LetExp =>
+    //const vars : L.VarDecl[] = R.map((b) => b.var, e.bindings);
+    //const vals: L.CExp[] = R.map((b) => b.val, e.bindings);
+    //const isAtomicBinding = (bid: L.Binding) => L.isAtomicExp(bid.val) &&(!L.isVarRef(bid.val))  ;
+    //const isCompoundBinding = (bid: L.Binding) => L.isCompoundExp(bid.val) || L.isVarRef(bid.val);
+    //const AtomicVals = R.filter(isAtomicBinding, e.bindings);
+    //const CompoundVals = R.map(rewriteVals, R.filter(isCompoundBinding, e.bindings));
     //const CompoundVals = R.filter(isCompoundBinding, e.bindings);
-        return (L.makeLetExp(AtomicVals,Array.of(L.makeLetExp(CompoundVals, e.body))));
-        // primitive vals should remain in the outer let 
+    (e.bindings.length == 1) ? L.makeLetExp(Array.of(e.bindings[0]), e.body) :
+        (L.makeLetExp(Array.of(e.bindings[0]),
+            Array.of(rewriteLet(L.makeLetPlusExp(e.bindings.slice(1, e.bindings.length), e.body)))
+        ));
+        // primitive vals should remain in the outer let
         // while compound vals should be put in the inner let ,  and themselves should be "cleaned"
         // from potential let* expressions 
-        
+
         //return L.makeAppExp(
         //        L.makeProcExp(vars, e.body),
     //    vals);
-        
-    }
+
+    
     
