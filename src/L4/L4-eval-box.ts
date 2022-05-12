@@ -2,17 +2,19 @@
 // L4 with mutation (set!) and env-box model
 // Direct evaluation of letrec with mutation, define supports mutual recursion.
 
-import { map, repeat, zipWith } from "ramda";
+import { is, map, o, repeat, zipWith } from "ramda";
 import { isBoolExp, isCExp, isLitExp, isNumExp, isPrimOp, isStrExp, isVarRef, isSetExp,
          isAppExp, isDefineExp, isIfExp, isLetrecExp, isLetExp, isProcExp, Binding, VarDecl, VarRef, CExp, Exp, IfExp, LetrecExp, LetExp, ProcExp, Program, SetExp,
          parseL4Exp, DefineExp, isTraceExp as isTraceExp, TraceExp, makeVarRef} from "./L4-ast";
 import { applyEnv, applyEnvBdg, globalEnvAddBinding, makeExtEnv, setFBinding,
-            theGlobalEnv, Env, FBinding } from "./L4-env-box";
+            theGlobalEnv, Env, FBinding, isFBinding } from "./L4-env-box";
 import { isClosure, makeClosure, Closure, Value, valueToString, TracedClosure, isTraceClosure, makeTracedClosure } from "./L4-value-box";
 import { applyPrimitive } from "./evalPrimitive-box";
 import { first, rest, isEmpty, cons } from "../shared/list";
-import { Result, bind, mapv, mapResult, makeFailure, makeOk } from "../shared/result";
+import { Result, bind, mapv, mapResult, makeFailure, makeOk, isOk } from "../shared/result";
 import { parse as p } from "../shared/parser";
+import { ok } from "assert";
+import * as R from "../shared/result";
 
 // ========================================================
 // Eval functions
@@ -43,11 +45,17 @@ export const isTrueValue = (x: Value): boolean =>
 
     
 // HW3
-const evalTraceExp = (exp: TraceExp, env: Env): Result<void> => {
-    //makeVarRef(exp.var.var)
-
-    return  makeOk(undefined);
+const helpTrace = (binding: FBinding, val: string, env: Env): Result<void> =>{
+    const res: Result<Value>=applyEnv(env, val);
+    isOk(res) ? isClosure(res.value) ? setFBinding(binding,makeTracedClosure(res.value,val,0)) : makeFailure("bla") : makeFailure("bla");
+    return makeOk(undefined);
 };
+const evalTraceExp = (exp: TraceExp, env: Env): Result<void> =>  {
+    const res: Result<FBinding>=applyEnvBdg(env, exp.var.var)
+    isOk(res) ? helpTrace(res.value, exp.var.var, env) :  res;
+    return makeOk(undefined); 
+};
+    //makeVarRef(exp.var.var)
 // HW3 use these functions
 const printPreTrace = (name: string, vals: Value[], counter: number): void =>
     console.log(`>${" >".repeat(counter)} (${name} ${map(valueToString, vals)})`)
@@ -77,10 +85,15 @@ const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
     return evalSequence(proc.body, makeExtEnv(vars, args, proc.env));
 }
 
+
 const applyTracedClosure = (proc: TracedClosure, args: Value[]): Result<Value> => {
-    const closureToTrace = proc.closure;
-    const vars = map((v: VarDecl) => v.var, closureToTrace.params);
-    return evalSequence(proc.body, makeExtEnv(vars, args, proc.env));
+    printPreTrace(proc.name,args,proc.num);  
+    proc.num++;
+    proc.name="";
+    const b : Result<Value> = applyClosure(proc.closure,args);
+    proc.num--;
+    isOk(b) ? printPostTrace(b.value,proc.num)  : console.log("something went wrong");
+    return b;
 
 };
 

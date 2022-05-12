@@ -49,9 +49,10 @@ export interface TracedClosure {
     tag: "TracedClosure";
     closure: Closure;
     name: string;
+    num:number;
 }
-export const makeTracedClosure = (closure: Closure, name: string): TracedClosure =>
-    ({ tag: "TracedClosure", closure, name });
+export const makeTracedClosure = (closure: Closure, name: string , num : number ): TracedClosure =>
+    ({ tag: "TracedClosure", closure, name , num});
     
 export const isTraceClosure = (x: any): x is TracedClosure =>
     x.tag === "TracedClosure";
