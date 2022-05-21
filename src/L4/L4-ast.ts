@@ -252,7 +252,7 @@ const parseProcExp = (vars: Sexp, body: Sexp[]): Result<ProcExp> =>
 // HW3
 export const parseTraceExp: (params: Sexp[]) => Result<TraceExp> =
     (params) =>
-        (params.length > 1 || params.length == 0) ? makeFailure('Trace gets one variable') :
+        (params.length !== 1) ? makeFailure('Trace gets one variable') :
             (isString(params[0])) ? makeOk(makeTraceExp(makeVarRef(params[0]))) : makeFailure('not a name');
         
 const isGoodBindings = (bindings: Sexp): bindings is [string, Sexp][] =>

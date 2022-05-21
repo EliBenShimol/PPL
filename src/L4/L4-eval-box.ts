@@ -89,12 +89,10 @@ const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
 const applyTracedClosure = (proc: TracedClosure, args: Value[]): Result<Value> => {
     printPreTrace(proc.name,args,proc.num);  
     proc.num++;
-    proc.name="";
     const b : Result<Value> = applyClosure(proc.closure,args);
     proc.num--;
     isOk(b) ? printPostTrace(b.value,proc.num)  : console.log("something went wrong");
     return b;
-
 };
 
 // Evaluate a sequence of expressions (in a program)
