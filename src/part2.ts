@@ -50,7 +50,15 @@ export function makeTableService<T>(sync: (table?: Table<T>) => Promise<Table<T>
 // Q 2.1 (b)
 
 export function getAll<T>(store: TableService<T>, keys: string[]): Promise<T[]> {
-   }
+    const a = Promise.all(keys.map(((x) => {
+        const p = store.get(x).then((item) => item);
+        p.catch((err) => console.error(err));
+        return p;
+    });
+    return a;
+    
+ }
+
     
  
 
