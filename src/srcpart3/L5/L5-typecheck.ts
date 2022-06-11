@@ -5,7 +5,7 @@ import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLetrecExp, isLetExp, isNum
          isPrimOp, isProcExp, isProgram, isStrExp, isVarRef, unparse, parseL51,
          AppExp, BoolExp, DefineExp, Exp, IfExp, LetrecExp, LetExp, NumExp, SetExp, LitExp,
          Parsed, PrimOp, ProcExp, Program, StrExp, isSetExp, isLitExp, 
-         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp } from "./L5-ast";
+         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp, makeTypeCaseExp } from "./L5-ast";
 import { applyTEnv, makeEmptyTEnv, makeExtendTEnv, TEnv } from "./TEnv";
 import { isProcTExp, makeBoolTExp, makeNumTExp, makeProcTExp, makeStrTExp, makeVoidTExp,
          parseTE, unparseTExp, Record,
@@ -15,6 +15,7 @@ import { isProcTExp, makeBoolTExp, makeNumTExp, makeProcTExp, makeStrTExp, makeV
 import { isEmpty, allT, first, rest, cons } from '../shared/list';
 import { Result, makeFailure, bind, makeOk, zipWithResult, mapv, mapResult, isFailure, either, isOk } from '../shared/result';
 import { isClosure, isSymbolSExp } from './L5-value';
+import { type } from 'node:os';
 
 // L51
 export const getTypeDefinitions = (p: Program): UserDefinedTExp[] => {
@@ -159,9 +160,10 @@ export const checkCoverType = (types: TExp[], p: Program): Result<TExp> => {
 // * Type of implicitly defined procedures for user defined types (define-type expressions in p)
 
 export const initTEnv = (p: Program): TEnv => {
-    const definitions = getDefinitions(p);
-    const type_definitions = getTypeDefinitions(p);
-    const records = getRecords(p);
+    //const definitions = getDefinitions(p);
+    //const type_definitions = getTypeDefinitions(p);
+    // const records = getRecords(p);
+    return makeEmptyTEnv();
 
 }
     
@@ -429,6 +431,5 @@ export const typeofLit = (exp: LitExp, _tenv: TEnv, _p: Program): Result<TExp> =
 //   ( type-case id val (record_1 (field_11 ... field_1r1) body_1)...  )
 //  TODO
 export const typeofTypeCase = (exp: TypeCaseExp, tenv: TEnv, p: Program): Result<TExp> => {
-
-    const constraint = bind(checkCoverType(exp.cases.map((x) => typeofExps(x.body,tenv,p)), p), (res) => res.exp.val);
+    return makeFailure("bla"); 
 }
