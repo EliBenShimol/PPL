@@ -163,32 +163,33 @@ export type ReactiveTableService<T> = {
 export async function makeReactiveTableService<T>(sync: (table?: Table<T>) => Promise<Table<T>>, optimistic: boolean): Promise<ReactiveTableService<T>> {
     // optional initialization code
     let _table: Table<T> = await sync()
-    let observer_arr: any[] = [];
+    let observer_arr: ((table:Table<T>) => void)[] = [];
     const handleMutation = async (newTable: Table<T>) => {
+
         if (optimistic) {
-            for (let v of observer_arr) {
-               v(newTable);
-            }
-        }
-        const p = sync(newTable).then((content) => {
-            if (!optimistic) {
+            try {
                 for (let v of observer_arr) {
-                    v(content);
+                    v(newTable)
                 }
+                _table = await sync(newTable);
             }
+            catch (err) {
+                for (let v of observer_arr) {
+                    v(_table)
+                }
+                _table = await sync(_table);
+            }
+
 
         }
-
-        ).catch((err) => {
-            if (optimistic) {
+        else {
+            _table = await sync(newTable);
+                await sync(newTable).then((content) => {
                 for (let v of observer_arr) {
-                    v(_table);
+                    v(newTable)
                 }
-                Promise.reject(err);
-
-            }
-        });
-        //return p;
+            })
+        }
     }
     return {
         get(key: string): T {
@@ -202,16 +203,13 @@ export async function makeReactiveTableService<T>(sync: (table?: Table<T>) => Pr
             
             const stringifiedTable = JSON.parse(JSON.stringify(_table));  
             stringifiedTable[key] = val;
-            console.log(stringifiedTable);
             return handleMutation(stringifiedTable);
             
         },
         delete(key: string): Promise<void> {
-            const stringifiedTable = Object.entries(_table);
-            console.log(stringifiedTable);
-            const filtered = stringifiedTable.filter((x) => x[0] !== key);
-            console.log(filtered);
-            return handleMutation(Object.fromEntries(filtered));
+            const stringifiedTable = JSON.parse(JSON.stringify(_table));
+            delete stringifiedTable[key];
+            return handleMutation(stringifiedTable);
 
             
         },
