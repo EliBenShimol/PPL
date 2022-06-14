@@ -1,11 +1,11 @@
 // L5-typecheck
 // ========================================================
-import { equals, filter, flatten, includes, map, intersection, zipWith, reduce, F, is, T } from 'ramda';
+import { equals, filter, flatten, includes, map, intersection, zipWith, reduce, F, is, T, anyPass } from 'ramda';
 import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLetrecExp, isLetExp, isNumExp,
          isPrimOp, isProcExp, isProgram, isStrExp, isVarRef, unparse, parseL51,
          AppExp, BoolExp, DefineExp, Exp, IfExp, LetrecExp, LetExp, NumExp, SetExp, LitExp,
          Parsed, PrimOp, ProcExp, Program, StrExp, isSetExp, isLitExp, 
-         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp, makeTypeCaseExp } from "./L5-ast";
+         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp, makeTypeCaseExp, VarDecl } from "./L5-ast";
 import { applyTEnv, makeEmptyTEnv, makeExtendTEnv, TEnv } from "./TEnv";
 import { isProcTExp, makeBoolTExp, makeNumTExp, makeProcTExp, makeStrTExp, makeVoidTExp,
          parseTE, unparseTExp, Record,
@@ -17,6 +17,8 @@ import { Result, makeFailure, bind, makeOk, zipWithResult, mapv, mapResult, isFa
 import { isClosure, isSymbolSExp } from './L5-value';
 import { type } from 'node:os';
 import { ok } from 'node:assert';
+import exp from 'node:constants';
+import { text } from 'stream/consumers';
 
 // L51
 export const getTypeDefinitions = (p: Program): UserDefinedTExp[] => {
@@ -81,9 +83,8 @@ export const getTypeByName = (typeName: string, p: Program): Result<UDTExp> => {
 // Is te1 a subtype of te2?
 const isSubType = (te1: TExp, te2: TExp, p: Program): boolean => {
     return equals(te1, te2) ? true :
-        (isUserDefinedNameTExp(te1) || isRecord(te1)) && isUserDefinedNameTExp(te2) ? getRecordParents(te1.typeName, p).some((x) => x.typeName === te2.typeName) :
+        ((isUserDefinedNameTExp(te1) || isRecord(te1)) && (isUserDefinedNameTExp(te2) || isRecord(te2))) ? getRecordParents(te1.typeName, p).some((x) => x.typeName === te2.typeName) :
         equals(te2, makeAnyTExp()) ? true:
-
     false;
 }
 // TODO L51: Change this definition to account for user defined types
@@ -162,16 +163,13 @@ export const checkCoverType = (types: TExp[], p: Program): Result<TExp> => {
 
 export const initTEnv = (p: Program): TEnv => {
     const definitions = getDefinitions(p);
-    const getRelevantRecords = (x: DefineExp) => typeofExp(x, makeEmptyTEnv(), p);
-    const types = mapResult(getRelevantRecords, definitions);
-    const a = isOk(types) ? types.value : [];
     const records = getRecords(p);
 
     const procs = records.map(x => makeProcTExp([makeAnyTExp()], makeBoolTExp()));
     const nameprocs = records.map(rec => rec.typeName + '?');
     const WithProcs = makeExtendTEnv(nameprocs, procs, makeEmptyTEnv());
 
-    const procs2 = records.map(x => makeProcTExp([makeAnyTExp()], x));
+    const procs2 = records.map(x => makeProcTExp(x.fields.map( y  => y.te), x));
     const name2procs = records.map(rec => "make-"+rec.typeName);
     const WithProcs2 = makeExtendTEnv(name2procs, procs2, WithProcs)
 
@@ -181,7 +179,7 @@ export const initTEnv = (p: Program): TEnv => {
     const WithProcs3 = makeExtendTEnv(nameprocs3, procs3, WithProcs2);
 
     const names = definitions.map(x => x.var.var);
-    return makeExtendTEnv(names, a, WithProcs3);
+    return makeExtendTEnv(names, definitions.map(x => x.var.texp), WithProcs3);
 
 }
     
@@ -225,13 +223,6 @@ export const checkTypeCase = (tc: TypeCaseExp, p: Program): Result<true> => {
         const b = a.value.records.map( x => x.typeName);
         const c = tc.cases.map( x => x.typeName);
         if(equals(b.sort(), c.sort())){
-            // const d = Object.fromEntries(a.value.records.map(x => [x.typeName, x.fields.map(y => y.te)]));
-            // const e = Object.fromEntries(tc.cases.map(x => [x.typeName, x.varDecls.map(y => y.texp)]));
-            // tc.cases.map(x => [x.typeName, x.varDecls.map(y => console.log(y))]);
-            // const f =Object.entries(d);
-            // console.log(e);
-            // console.log(d);
-            // const h = f.map(x => equals(e[x[0]], x[1])).every(x => x===true);
             const d=a.value.records.map(x => [x.typeName, x.fields.map(y => y.te)]).length;
             const e=tc.cases.map(x => [x.typeName, x.varDecls.map(y => y.texp)]).length;
             if (d === e){
@@ -246,6 +237,10 @@ export const checkTypeCase = (tc: TypeCaseExp, p: Program): Result<true> => {
         }
     }
     else{
+        const ans = tc.cases.filter( x => x.typeName === tc.typeName);
+        if(ans.length === 1){
+            return makeOk(true);
+        }
         return makeFailure("3.2.41");
     }
 }
@@ -459,7 +454,16 @@ export const typeofProgram = (exp: Program, tenv: TEnv, p: Program): Result<TExp
 
 // TODO L51
 // Write the typing rule for DefineType expressions
-export const typeofDefineType = (exp: DefineTypeExp, _tenv: TEnv, _p: Program): Result<TExp> => makeOk(makeAnyTExp());
+export const typeofDefineType = (exp: DefineTypeExp, _tenv: TEnv, _p: Program): Result<TExp> =>
+{
+    const check= checkUserDefinedTypes(_p);
+    if(isOk(check)){
+        return makeOk(makeUserDefinedNameTExp(exp.typeName));
+    }
+    else{
+        return makeFailure(check.message);
+    }
+}
 // TODO L51
 export const typeofSet = (exp: SetExp, _tenv: TEnv, _p: Program): Result<TExp> => {
     const a: Result<TExp> = typeofExp(exp.val, _tenv, _p);
@@ -489,13 +493,65 @@ export const typeofLit = (exp: LitExp, _tenv: TEnv, _p: Program): Result<TExp> =
 //   ( type-case id val (record_1 (field_11 ... field_1r1) body_1)...  )
 //  TODO
 export const typeofTypeCase = (exp: TypeCaseExp, tenv: TEnv, p: Program): Result<TExp> => {
-    const allOk = checkUserDefinedTypes(p);
-    const okType= checkTypeCase(exp, p);
-    if(isOk(allOk) && isOk(okType)){
-        //need to check the type of the return at the cases using the body (i think)
-        return makeOk(makeNumTExp());
-     }
-     else{
-         return makeFailure("no good"); 
-     }
+    const okType = checkTypeCase(exp, p);
+    if(isOk(okType)){
+        let count = -1;
+        const allTypes = exp.cases.map( x => { count++; return getReturnType(x.typeName, exp, tenv, p, count)});
+        const a = allTypes.map(x => isOk(x) ? x.value : "end").filter( x => x !=="end");
+        if(a.length === allTypes.length){
+            const ans = a.reduce((acc, curr) =>
+            (isRecord(curr) || isUserDefinedTExp(curr)) ? 
+            (isRecord(acc) || isUserDefinedTExp(acc)) ? 
+            isSubType(curr, acc, p) ? acc : 
+            isSubType(acc, curr, p) ? curr :
+            isRecord(acc) ? getRecordParents(curr.typeName, p).map(x => {return getRecordParents(acc.typeName, p).includes(x) ? x : makeNumTExp()}).filter(x => !isNumTExp(x))[0]
+            :acc
+            :acc
+            :curr);
+            if(ans !== "end"){
+                if(isRecord(ans)){
+                    return makeOk(makeUserDefinedNameTExp(ans.typeName));
+                }
+                else if(isUserDefinedTExp(ans)){
+                    return makeOk(makeUserDefinedNameTExp(ans.typeName));
+                }
+                return makeOk(ans);
+            }
+            else{
+                return makeFailure("end");
+            }
+        }
+        else{
+            return makeFailure("can't find");
+        }
+
+        
+    }
+    else{
+        return makeFailure(okType.message);
+        }
+    }
+
+
+
+const getReturnType=(name:string, exp: TypeCaseExp, tenv: TEnv, p: Program, count:number):Result<TExp> =>{
+    let UserDef = getUserDefinedTypeByName(name,p);
+        if(!isOk(UserDef)){
+            UserDef = makeOk(getRecordParents(name , p)[0]);
+        }
+        const fieldsNamesArr  = exp.cases[count].varDecls.map((vardec : VarDecl)=>vardec.var);
+        const tmp  = bind(UserDef, (usdef : UserDefinedTExp) => makeOk(usdef.records.filter( y => y.typeName === exp.cases[count].typeName)[0]));
+        const fieldsTexpArr = bind (tmp , (y: Record) => makeOk(y.fields.map(z => z.te)));
+        if(isOk(fieldsTexpArr)){
+            const con = typeofExp(exp.cases[count].body[exp.cases[count].body.length-1], makeExtendTEnv(fieldsNamesArr,fieldsTexpArr.value,tenv), p);
+            if(isOk(con)){
+                    return makeOk(con.value);
+            }
+            else{
+                    return makeFailure(con.message);
+                }
+            }
+            else{
+                return makeFailure(fieldsTexpArr.message);
+            }
 }
