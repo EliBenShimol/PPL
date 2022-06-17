@@ -5,13 +5,13 @@ import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLetrecExp, isLetExp, isNum
          isPrimOp, isProcExp, isProgram, isStrExp, isVarRef, unparse, parseL51,
          AppExp, BoolExp, DefineExp, Exp, IfExp, LetrecExp, LetExp, NumExp, SetExp, LitExp,
          Parsed, PrimOp, ProcExp, Program, StrExp, isSetExp, isLitExp, 
-         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp, makeTypeCaseExp, VarDecl } from "./L5-ast";
+         isDefineTypeExp, isTypeCaseExp, DefineTypeExp, TypeCaseExp, CaseExp, CExp, makeProgram, makeLitExp, makeTypeCaseExp, VarDecl, makeSetExp } from "./L5-ast";
 import { applyTEnv, makeEmptyTEnv, makeExtendTEnv, TEnv } from "./TEnv";
 import { isProcTExp, makeBoolTExp, makeNumTExp, makeProcTExp, makeStrTExp, makeVoidTExp,
          parseTE, unparseTExp, Record,
          BoolTExp, NumTExp, StrTExp, TExp, VoidTExp, UserDefinedTExp, isUserDefinedTExp, UDTExp, 
          isNumTExp, isBoolTExp, isStrTExp, isVoidTExp,
-         isRecord, ProcTExp, makeUserDefinedNameTExp, Field, makeAnyTExp, isAnyTExp, isUserDefinedNameTExp, UserDefinedNameTExp, makeLitTExp } from "./TExp";
+         isRecord, ProcTExp, makeUserDefinedNameTExp, Field, makeAnyTExp, isAnyTExp, isUserDefinedNameTExp, UserDefinedNameTExp, makeLitTExp, makeSetTExp, isTExp } from "./TExp";
 import { isEmpty, allT, first, rest, cons } from '../shared/list';
 import { Result, makeFailure, bind, makeOk, zipWithResult, mapv, mapResult, isFailure, either, isOk } from '../shared/result';
 import { isClosure, isSymbolSExp } from './L5-value';
@@ -83,8 +83,8 @@ export const getTypeByName = (typeName: string, p: Program): Result<UDTExp> => {
 // Is te1 a subtype of te2?
 const isSubType = (te1: TExp, te2: TExp, p: Program): boolean => {
     return equals(te1, te2) ? true :
-        ((isUserDefinedNameTExp(te1) || isRecord(te1)) && (isUserDefinedNameTExp(te2) || isRecord(te2))) ? getRecordParents(te1.typeName, p).some((x) => x.typeName === te2.typeName) :
-        equals(te2, makeAnyTExp()) ? true:
+    equals(te2, makeAnyTExp()) ? true : 
+    ((isUserDefinedNameTExp(te1)) && (isUserDefinedNameTExp(te2))) ? getRecordParents(te1.typeName, p).some((x) => x.typeName === te2.typeName) :
     false;
 }
 // TODO L51: Change this definition to account for user defined types
@@ -237,7 +237,7 @@ export const checkTypeCase = (tc: TypeCaseExp, p: Program): Result<true> => {
         }
     }
     else{
-        const ans = tc.cases.filter( x => x.typeName === tc.typeName);
+        const ans = tc.cases.filter(x => x.typeName === tc.typeName);
         if(ans.length === 1){
             return makeOk(true);
         }
@@ -465,16 +465,7 @@ export const typeofDefineType = (exp: DefineTypeExp, _tenv: TEnv, _p: Program): 
     }
 }
 // TODO L51
-export const typeofSet = (exp: SetExp, _tenv: TEnv, _p: Program): Result<TExp> => {
-    const a: Result<TExp> = typeofExp(exp.val, _tenv, _p);
-    if (isOk(a)) {
-        _tenv = makeExtendTEnv([exp.var.var], [a.value], _tenv);
-        return applyTEnv(_tenv, exp.var.var);
-    }
-    else {
-        return makeFailure(`Todo ${JSON.stringify(exp, null, 2)}`);
-    }
-}
+export const typeofSet = (exp: SetExp, _tenv: TEnv, _p: Program): Result<TExp> =>  makeOk(makeVoidTExp());
     
 
 // TODO L51
@@ -497,29 +488,32 @@ export const typeofTypeCase = (exp: TypeCaseExp, tenv: TEnv, p: Program): Result
     if(isOk(okType)){
         let count = -1;
         const allTypes = exp.cases.map( x => { count++; return getReturnType(x.typeName, exp, tenv, p, count)});
-        const a = allTypes.map(x => isOk(x) ? x.value : "end").filter( x => x !=="end");
+        const a = allTypes.map(x => isOk(x) ? x.value : makeVoidTExp()).filter(x => !isVoidTExp(x));
         if(a.length === allTypes.length){
-            const ans = a.reduce((acc, curr) =>
-            (isRecord(curr) || isUserDefinedTExp(curr)) ? 
-            (isRecord(acc) || isUserDefinedTExp(acc)) ? 
-            isSubType(curr, acc, p) ? acc : 
-            isSubType(acc, curr, p) ? curr :
-            isRecord(acc) ? getRecordParents(curr.typeName, p).map(x => {return getRecordParents(acc.typeName, p).includes(x) ? x : makeNumTExp()}).filter(x => !isNumTExp(x))[0]
-            :acc
-            :acc
-            :curr);
-            if(ans !== "end"){
-                if(isRecord(ans)){
-                    return makeOk(makeUserDefinedNameTExp(ans.typeName));
-                }
-                else if(isUserDefinedTExp(ans)){
-                    return makeOk(makeUserDefinedNameTExp(ans.typeName));
-                }
-                return makeOk(ans);
-            }
-            else{
-                return makeFailure("end");
-            }
+            const ans2 = checkCoverType(a, p);
+            return ans2;
+            // console.log(ans2);
+            // const ans = a.reduce((acc, curr) =>
+            // (isRecord(curr) || isUserDefinedNameTExp(curr)) ? 
+            // (isRecord(acc) || isUserDefinedNameTExp(acc)) ? 
+            // isSubType(curr, acc, p) ? acc : 
+            // isSubType(acc, curr, p) ? curr :
+            // isRecord(acc) ? getRecordParents(curr.typeName, p).map(x => {return getRecordParents(acc.typeName, p).includes(x) ? x : makeNumTExp()}).filter(x => !isNumTExp(x))[0]
+            // :acc
+            // :acc
+            // :curr);
+            // if(!isVoidTExp(ans)){
+            //     if(isRecord(ans)){
+            //       return makeOk(makeUserDefinedNameTExp(ans.typeName));
+            //     }
+            //     else if(isUserDefinedTExp(ans)){
+            //         return makeOk(makeUserDefinedNameTExp(ans.typeName));
+            //     }
+            //     return makeOk(ans);
+            // }
+            // else{
+            //     return makeFailure("end");
+            // }
         }
         else{
             return makeFailure("can't find");

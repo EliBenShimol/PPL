@@ -54,8 +54,8 @@ export type AtomicTExp = NumTExp | BoolTExp | StrTExp | VoidTExp | UserDefinedNa
 export const isAtomicTExp = (x: any): x is AtomicTExp =>
     isNumTExp(x) || isBoolTExp(x) || isStrTExp(x) || isVoidTExp(x) || isUserDefinedNameTExp(x) || isAnyTExp(x); // L51
 
-export type CompoundTExp = ProcTExp | TupleTExp | UserDefinedTExp | Record | LitTExp;  // L51
-export const isCompoundTExp = (x: any): x is CompoundTExp => isProcTExp(x) || isTupleTExp(x) || isUserDefinedTExp(x) || isLitTExp(x); 
+export type CompoundTExp = ProcTExp | TupleTExp | UserDefinedTExp | Record | LitTExp | SetTExp;  // L51
+export const isCompoundTExp = (x: any): x is CompoundTExp => isProcTExp(x) || isTupleTExp(x) || isUserDefinedTExp(x) || isLitTExp(x) || isSetTExp(x); 
 
 export type NonTupleTExp = AtomicTExp | ProcTExp | TVar | UserDefinedNameTExp; // L51
 export const isNonTupleTExp = (x: any): x is NonTupleTExp =>
@@ -98,6 +98,10 @@ export const isNumTExp = (x: any): x is NumTExp => x.tag === "NumTExp";
 export type LitTExp= {tag : "Literal"};
 export const makeLitTExp = (): LitTExp => ({tag: "Literal"});
 export const isLitTExp = (x: any): x is LitTExp => x.tag === "Literal";
+
+export type SetTExp= {tag : "set!"};
+export const makeSetTExp = (): SetTExp => ({tag: "set!"});
+export const isSetTExp = (x: any): x is SetTExp => x.tag === "set!";
 
 export type BoolTExp = { tag: "BoolTExp" };
 export const makeBoolTExp = (): BoolTExp => ({tag: "BoolTExp"});
@@ -338,6 +342,7 @@ export const unparseTExp = (te: TExp): Result<string> => {
         isBoolTExp(x) ? makeOk('boolean') :
         isStrTExp(x) ? makeOk('string') :
         isLitTExp(x) ? makeOk('literal'):
+        isSetTExp(x) ? makeOk('set!') : 
         isVoidTExp(x) ? makeOk('void') :
         isAnyTExp(x) ? makeOk('any') :
         isEmptyTVar(x) ? makeOk(x.var) :
