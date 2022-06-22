@@ -46,16 +46,25 @@
 ;      -> [T1 * [T2n+3 -> T2n+4]] -> T2n+4
 ; Purpose: Returns the composition of a given list of unry CPS functions.
 
+
 (define compose$
   (lambda (f g)
     (lambda (x con)
       (g (f x id) con))))
 
+(define pipe1$
+(lambda (fs con)
+        (if (empty? (cdr fs))
+            (con (car fs))
+        (compose$ (car fs) (pipe1$ (cdr fs) con)))))
+
+
 (define pipe$
 (lambda (fs con)
         (if (empty? (cdr fs))
-        (con (car fs))
-        (compose$ (car fs) (pipe$ (cdr fs) con)))))
+            (con (car fs))
+        (pipe$ (cdr fs) (lambda(rest)(con(compose$ (car fs) rest)))))))
+
 
 
 ;;; Q1.c
