@@ -53,7 +53,6 @@
 (check-equal? (reduce-user$ div$ 100 '(5 4 1) (lambda (x) (* x 2))) 10 "incorrect reduce-user$ test2")
 
 
-
 ;; Q2.c
 (check-equal? (take-while (integers-from 0) (lambda (x) (< x 9))) '(0 1 2 3 4 5 6 7 8) "incorrect take-while test1")
 (check-equal? (take-while (integers-from 0) (lambda (x) (= x 128))) '() "incorrect take-while test2")
