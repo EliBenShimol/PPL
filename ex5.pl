@@ -21,8 +21,11 @@ maximum_printing_depth(100).
 member2(X, [X|_Ys]).
 member2(X, [_Y|Ys]) :- member2(X, Ys).
 
+notMember(_X, []).
+notMember(X, [Y|Ys]):- (X =\= Y), notMember(X, Ys).
+
 unique([], [], []).
-unique([X|List], [X|UniqueList], Dups) :- unique(List, UniqueList, Dups),(\+ member2(X, UniqueList)).
+unique([X|List], [X|UniqueList], Dups) :- unique(List, UniqueList, Dups),notMember(X, UniqueList).
 unique([X|List], UniqueList, [X|Dups]) :- unique(List, UniqueList, Dups), member2(X, UniqueList).
 
 
