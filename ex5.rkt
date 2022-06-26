@@ -49,7 +49,8 @@
 (define compose$
   (lambda (f g)
     (lambda (x con)
-      (g (f x id) con))))
+      (f x (lambda(res)( g res con ))))))
+
 
 (define pipe$
 (lambda (fs con)
