@@ -47,16 +47,16 @@
 ; Purpose: Returns the composition of a given list of unry CPS functions.
 
 (define compose$
-  (lambda (f g)
-    (lambda (x con)
-      (f x (lambda(res)( g res con ))))))
+  (lambda (f g cont)
+    (cont(lambda (x con)
+      (f x (lambda(res)( g res con )))))))
 
 
 (define pipe$
 (lambda (fs con)
         (if (empty? (cdr fs))
             (con (car fs))
-            (pipe$ (cdr fs) (lambda(rest)(con(compose$ (car fs) rest)))))))
+            (pipe$ (cdr fs) (lambda(rest)(compose$ (car fs) rest con))))))
 
 (define pipe1$
 (lambda (fs con)

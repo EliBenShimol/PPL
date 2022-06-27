@@ -24,9 +24,14 @@ member2(X, [_Y|Ys]) :- member2(X, Ys).
 notMember(_X, []).
 notMember(X, [Y|Ys]):- (X =\= Y), notMember(X, Ys).
 
-unique([], [], []).
-unique([X|List], [X|UniqueList], Dups) :- unique(List, UniqueList, Dups),notMember(X, UniqueList).
-unique([X|List], UniqueList, [X|Dups]) :- unique(List, UniqueList, Dups), member2(X, UniqueList).
+
+unique(List, UniqueList, Dups) :- uniqueHelp([], List, UniqueList, Dups).
+
+uniqueHelp(_AllList, [], [], []).
+uniqueHelp(AllList, [X|List], [X|UniqueList], Dups) :- uniqueHelp([X|AllList], List, UniqueList, Dups), notMember(X, AllList).
+uniqueHelp(AllList, [X|List], UniqueList, [X|Dups]) :- uniqueHelp(AllList, List, UniqueList, Dups), member2(X, AllList).
+
+
 
 
 
